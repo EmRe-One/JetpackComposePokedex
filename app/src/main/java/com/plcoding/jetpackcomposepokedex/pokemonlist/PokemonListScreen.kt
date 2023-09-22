@@ -31,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
@@ -45,10 +46,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
@@ -146,18 +149,20 @@ fun PokemonList(
     val isSearching by remember { viewModel.isSearching }
 
     LazyColumn(contentPadding = PaddingValues(16.dp)) {
-        val itemCount = if (pokemonList.size % 2 == 0) {
-            pokemonList.size / 2
-        } else {
-            pokemonList.size / 2 + 1
-        }
-        items(itemCount) {
-            if (it >= itemCount - 1 && !endReached && !isLoading && !isSearching) {
+        items(pokemonList.size) {
+            if (it >= pokemonList.size - 1 && !endReached && !isLoading && !isSearching) {
                 LaunchedEffect(key1 = true) {
                     viewModel.loadPokemonPaginated()
                 }
             }
-            PokedexRow(rowIndex = it, entries = pokemonList, navController = navController)
+
+            PokedexEntry(
+                entry = pokemonList[it],
+                navController = navController,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 
@@ -189,17 +194,15 @@ fun PokedexEntry(
         mutableStateOf(defaultDominantColor)
     }
 
-    Box(
-        contentAlignment = Center,
+    Row(
         modifier = modifier
-            .shadow(5.dp, RoundedCornerShape(10.dp))
-            .clip(RoundedCornerShape(10.dp))
-            .aspectRatio(1f)
+            .shadow(5.dp, RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(8.dp))
             .background(
-                Brush.verticalGradient(
+                Brush.horizontalGradient(
                     listOf(
-                        dominantColor,
-                        defaultDominantColor
+                        defaultDominantColor,
+                        dominantColor
                     )
                 )
             )
@@ -209,7 +212,32 @@ fun PokedexEntry(
                 )
             }
     ) {
-        Column {
+
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .padding(4.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(text = if (entry.isCaught) "•" else "", fontSize = 20.sp)
+        }
+
+        Box(
+            contentAlignment = Center,
+            modifier = Modifier
+                .height(40.dp)
+                .width(40.dp)
+        ) {
+            Text(text = "#${entry.number}", fontSize = 20.sp)
+        }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .padding(4.dp)
+        ) {
             val painter = rememberAsyncImagePainter(
                 model = ImageRequest.Builder(LocalContext.current)
                     .data(entry.imageUrl)
@@ -224,20 +252,30 @@ fun PokedexEntry(
                 }
             }
 
-            Image(
-                painter = painter,
-                contentDescription = entry.pokemonName,
-                modifier = Modifier
-                    .size(120.dp)
-                    .align(CenterHorizontally)
-            )
+            if (entry.isSeen) {
+                Image(
+                    painter = painter,
+                    contentDescription = entry.pokemonName,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+            else {
+                Text(text = "?", fontSize = 20.sp)
+            }
+        }
 
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(40.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
             Text(
-                text = entry.pokemonName,
+                text = if (entry.isSeen) entry.pokemonName else " -- ",
                 fontFamily = RobotoCondensed,
-                fontSize = 20.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
+                fontSize = 20.sp
             )
         }
     }
@@ -286,4 +324,26 @@ fun RetrySection(
             Text(text = "Retry")
         }
     }
+}
+
+@Preview
+@Composable
+fun PokedexEntryPreview() {
+    val navController = rememberNavController()
+
+    Column {
+        PokedexEntry(
+            entry = PokedexListEntry(1, "Pokemon 1", "", false, false),
+            navController = navController
+        )
+        PokedexEntry(
+            entry = PokedexListEntry(1, "Pokemon 1", "", true, false),
+            navController = navController
+        )
+        PokedexEntry(
+            entry = PokedexListEntry(1, "Pokemon 1", "", true, true),
+            navController = navController
+        )
+    }
+
 }
